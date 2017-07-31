@@ -247,11 +247,12 @@ void MediaKeySession::load(const String& sessionId, Ref<DeferredPromise>&& promi
 
     // 1. If this object is closed, return a promise rejected with an InvalidStateError.
     // 2. If this object's uninitialized value is false, return a promise rejected with an InvalidStateError.
+# if 0 /* Commenting this condition check for loading a closed persistent session */
     if (m_closed || !m_uninitialized) {
         promise->reject(INVALID_STATE_ERR);
         return;
     }
-
+# endif 
     // 3. Let this object's uninitialized value be false.
     m_uninitialized = false;
 
