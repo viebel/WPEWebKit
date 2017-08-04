@@ -84,11 +84,11 @@ public:
     SuccessValue setPersistentStateAllowed(bool) override;
     SuccessValue setServerCertificate(Ref<SharedBuffer>&&) override;
 
-    void requestLicense(LicenseType licenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback) override;
-    void updateLicense(const String&, LicenseType licenseType, const SharedBuffer&, LicenseUpdateCallback) override;
-    void loadSession(LicenseType licenseType, const String&, const String&, LoadSessionCallback) override;
+    void requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback) override;
+    void updateLicense(const String&, LicenseType, const SharedBuffer&, LicenseUpdateCallback) override;
+    void loadSession(LicenseType, const String&, const String&, LoadSessionCallback) override;
     void closeSession(const String&, CloseSessionCallback) override;
-    void removeSessionData(const String&, LicenseType licenseType, RemoveSessionDataCallback) override;
+    void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback) override;
     void storeRecordOfKeyUsage(const String&) override;
 
     void gatherAvailableKeys(AvailableKeysCallback) override;
@@ -356,7 +356,7 @@ size_t CDMInstanceOpenCDM::checkMessageLength(std::string& message, std::string&
     return length;
 }
 
-void CDMInstanceOpenCDM::loadSession(LicenseType licenseType, const String& sessionId, const String&, LoadSessionCallback callback)
+void CDMInstanceOpenCDM::loadSession(LicenseType, const String& sessionId, const String&, LoadSessionCallback callback)
 {
     std::string responseMessage;
     SessionLoadFailure sessionFailure = SessionLoadFailure::None;
@@ -368,7 +368,8 @@ void CDMInstanceOpenCDM::loadSession(LicenseType licenseType, const String& sess
             GST_TRACE("message length %u", length);
             auto message = SharedBuffer::create((responseMessage.c_str() + length), (responseMessage.length() - length));
             callback(std::nullopt, std::nullopt, std::nullopt, SuccessValue::Succeeded, sessionFailure);
-//          callback(std::nullopt, std::nullopt, std::move(WTFMove(message)), SuccessValue::Succeeded, sessionFailure);
+            // TODO : Maybe we need to send the message for partially remove scenario
+            // callback(std::nullopt, std::nullopt, std::move(WTFMove(message)), SuccessValue::Succeeded, sessionFailure);
             return;
         }
 
@@ -390,7 +391,7 @@ void CDMInstanceOpenCDM::closeSession(const String&, CloseSessionCallback callba
     callback();
 }
 
-void CDMInstanceOpenCDM::removeSessionData(const String& sessionId, LicenseType licenseType, RemoveSessionDataCallback callback)
+void CDMInstanceOpenCDM::removeSessionData(const String& sessionId, LicenseType, RemoveSessionDataCallback callback)
 {
     std::string responseMessage;
     KeyStatusVector keys;
@@ -410,13 +411,12 @@ void CDMInstanceOpenCDM::removeSessionData(const String& sessionId, LicenseType 
             return;
         }
     }
-    //FIXME:Check the working of removeSession sequence from OpenCDMi and make the required change for KeyStatus
-#if 1 
+
     SharedBuffer* initData = sessionIdMap.get(sessionId);
     MediaKeyStatus keyStatus = getKeyStatus(responseMessage);
     keys.append(std::pair<Ref<SharedBuffer>, MediaKeyStatus>{*initData, keyStatus});
-#endif
-    callback(WTFMove(keys), std::nullopt, SuccessValue::Succeeded);
+    callback(WTFMove(keys), std::nullopt, SuccessValue::Failed);
+    return;
 }
 
 void CDMInstanceOpenCDM::storeRecordOfKeyUsage(const String&)
